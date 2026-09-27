@@ -6,7 +6,6 @@
 /* ========== UTILITAS ========== */
 function $(selector) {
   const el = document.querySelector(selector);
-  if (!el) console.warn(`Elemen tidak ditemukan: ${selector}`);
   return el;
 }
 function $all(selector) {
@@ -47,14 +46,18 @@ function switchTab(name, updateUrl = true) {
   });
 
   // Update URL Query String tanpa mereload halaman
-  if (updateUrl === "push") {
-    const url = new URL(window.location);
-    url.searchParams.set("tab", name);
-    window.history.pushState({}, "", url);
-  } else if (updateUrl === "replace") {
-    const url = new URL(window.location);
-    url.searchParams.set("tab", name);
-    window.history.replaceState({}, "", url);
+  try {
+    if (updateUrl === "push") {
+      const url = new URL(window.location);
+      url.searchParams.set("tab", name);
+      window.history.pushState({}, "", url);
+    } else if (updateUrl === "replace") {
+      const url = new URL(window.location);
+      url.searchParams.set("tab", name);
+      window.history.replaceState({}, "", url);
+    }
+  } catch (err) {
+    // Ignore history API errors in restricted iframes/environments
   }
 }
 
@@ -161,9 +164,9 @@ function formatRupiah(number) {
 }
 
 function renderExpenses() {
-  const query = expSearch.value.trim().toLowerCase();
-  const filterType = expFilterType.value;
-  const sort = expSort.value;
+  const query = (expSearch?.value || "").trim().toLowerCase();
+  const filterType = expFilterType?.value || "Semua";
+  const sort = expSort?.value || "terbaru";
 
   // Filter
   let items = expenses.filter((e) => {

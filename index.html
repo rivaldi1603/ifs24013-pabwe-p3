@@ -7,7 +7,7 @@
   <title>All-in-One App — Praktikum 3</title>
   
   <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com" defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -35,6 +35,15 @@
   <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" /></noscript>
   
   <style>
+    @font-face {
+      font-family: "tabler-icons";
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/fonts/tabler-icons.woff2?v2.47.0") format("woff2"),
+           url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/fonts/tabler-icons.woff?v2.47.0") format("woff"),
+           url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/fonts/tabler-icons.ttf?v2.47.0") format("truetype");
+    }
     body {
       background:
         radial-gradient(ellipse 80% 50% at 20% -10%, #e0e7ff 0%, transparent 55%),
@@ -138,7 +147,7 @@
           </select>
         </div>
 
-        <div id="expense-empty" class="hidden rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm flex items-start gap-2" role="alert">
+        <div id="expense-empty" class="rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm flex items-start gap-2" role="alert">
           <i class="ti ti-alert-circle text-lg mt-0.5 shrink-0"></i>
           <span>Belum ada transaksi tercatat. Tambahkan transaksi baru.</span>
         </div>
@@ -179,7 +188,7 @@
           </select>
         </div>
 
-        <div id="bookmark-empty" class="hidden rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm flex items-start gap-2" role="alert">
+        <div id="bookmark-empty" class="rounded-xl border border-amber-200 bg-amber-50 text-amber-900 px-4 py-3 text-sm flex items-start gap-2" role="alert">
           <i class="ti ti-alert-circle text-lg mt-0.5 shrink-0"></i>
           <span>Belum ada bookmark tersimpan.</span>
         </div>
