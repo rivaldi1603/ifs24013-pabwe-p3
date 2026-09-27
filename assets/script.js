@@ -47,10 +47,14 @@ function switchTab(name, updateUrl = true) {
   });
 
   // Update URL Query String tanpa mereload halaman
-  if (updateUrl) {
+  if (updateUrl === "push") {
     const url = new URL(window.location);
     url.searchParams.set("tab", name);
     window.history.pushState({}, "", url);
+  } else if (updateUrl === "replace") {
+    const url = new URL(window.location);
+    url.searchParams.set("tab", name);
+    window.history.replaceState({}, "", url);
   }
 }
 
@@ -66,7 +70,19 @@ window.addEventListener("popstate", () => {
 });
 
 
-/* ========== MODAL GLOBAL ========== */
+/* ========== MODAL GLOBAL & HELPER ========== */
+function showInlineError(formEl, message) {
+  let errEl = formEl.querySelector(".inline-error-msg");
+  if (!errEl) {
+    errEl = document.createElement("div");
+    errEl.className = "inline-error-msg col-span-full rounded-lg bg-rose-50 text-rose-600 px-3 py-2 text-sm border border-rose-200 mt-1 mb-2 flex items-center gap-2";
+    formEl.insertBefore(errEl, formEl.firstChild);
+  }
+  errEl.innerHTML = `<i class="ti ti-alert-circle"></i> <span>${message}</span>`;
+  errEl.classList.remove("hidden");
+  setTimeout(() => errEl.classList.add("hidden"), 3000);
+}
+
 function openModal(modal) {
   if (!modal) return;
   modal.classList.remove("hidden");
@@ -253,11 +269,16 @@ function renderExpenses() {
 if (expenseForm) {
   expenseForm.addEventListener("submit", (e) => {
     e.preventDefault();
+    const amountVal = Number(expAmount.value);
+    if (!Number.isFinite(amountVal) || amountVal <= 0) {
+      showInlineError(expenseForm, "Jumlah transaksi harus berupa angka lebih dari 0!");
+      return;
+    }
     expenses.push({
       id: crypto.randomUUID(),
       title: expTitle.value.trim(),
       category: expCategory.value,
-      amount: Number(expAmount.value),
+      amount: amountVal,
       type: expType.value,
       date: expDate.value,
       createdAt: Date.now()
@@ -293,9 +314,14 @@ if (expenseEditForm) {
     e.preventDefault();
     const exp = expenses.find(x => x.id === editExpenseId);
     if (exp) {
+      const amountVal = Number($("#expense-edit-amount").value);
+      if (!Number.isFinite(amountVal) || amountVal <= 0) {
+        showInlineError(expenseEditForm, "Jumlah transaksi harus berupa angka lebih dari 0!");
+        return;
+      }
       exp.title = $("#expense-edit-title").value.trim();
       exp.category = $("#expense-edit-category").value;
-      exp.amount = Number($("#expense-edit-amount").value);
+      exp.amount = amountVal;
       exp.type = $("#expense-edit-type").value;
       exp.date = $("#expense-edit-date").value;
       saveData(EXPENSE_STORAGE_KEY, expenses);
@@ -408,7 +434,7 @@ if (bookmarkForm) {
     e.preventDefault();
     const urlInput = $("#bookmark-url").value.trim();
     if (!isValidURL(urlInput)) {
-      alert("URL tidak valid! Harus berawalan http:// atau https://");
+      showInlineError(bookmarkForm, "URL tidak valid! Harus berawalan http:// atau https://");
       return;
     }
     
@@ -451,7 +477,7 @@ if (bookmarkEditForm) {
     if (bm) {
       const urlInput = $("#bookmark-edit-url").value.trim();
       if (!isValidURL(urlInput)) {
-        alert("URL tidak valid! Harus berawalan http:// atau https://");
+        showInlineError(bookmarkEditForm, "URL tidak valid! Harus berawalan http:// atau https://");
         return;
       }
       bm.title = $("#bookmark-edit-title").value.trim();
@@ -673,7 +699,7 @@ $("#btn-retry-quiz")?.addEventListener("click", () => {
 document.addEventListener("DOMContentLoaded", () => {
   // Inisialisasi tab berdasar URL params
   const params = new URLSearchParams(window.location.search);
-  switchTab(params.get("tab") || "expense", false);
+  switchTab(params.get("tab") || "expense", "replace");
   
   // Render awal data
   renderExpenses();
