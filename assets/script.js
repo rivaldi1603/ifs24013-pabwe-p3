@@ -12,6 +12,17 @@ function $all(selector) {
   return document.querySelectorAll(selector);
 }
 
+function escapeHTML(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;'
+  }[tag]));
+}
+
 /* ========== TAB SWITCHER (via URL Query) ========== */
 const tabButtons = $all(".tab-btn");
 const panels = {
@@ -20,7 +31,7 @@ const panels = {
   quiz: $("#panel-quiz"),
 };
 
-function switchTab(name, updateUrl = true) {
+function switchTab(name, updateUrl = "push") {
   if (!panels[name]) name = "expense";
   
   // Sembunyikan panel lain
@@ -230,10 +241,10 @@ function renderExpenses() {
     const infoDiv = document.createElement("div");
     infoDiv.className = "flex-1 min-w-0";
     infoDiv.innerHTML = `
-      <p class="font-medium text-slate-900 truncate">${exp.title}</p>
+      <p class="font-medium text-slate-900 truncate">${escapeHTML(exp.title)}</p>
       <div class="flex flex-wrap items-center gap-2 mt-1">
-        <span class="inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">${exp.category}</span>
-        <span class="text-xs text-slate-500"><i class="ti ti-calendar text-[10px]"></i> ${exp.date}</span>
+        <span class="inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">${escapeHTML(exp.category)}</span>
+        <span class="text-xs text-slate-500"><i class="ti ti-calendar text-[10px]"></i> ${escapeHTML(exp.date)}</span>
       </div>
     `;
 
@@ -385,7 +396,7 @@ function renderBookmarks() {
     // Header (Kategori + Actions)
     const header = document.createElement("div");
     header.className = "flex items-center justify-between";
-    header.innerHTML = `<span class="inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">${bm.category}</span>`;
+    header.innerHTML = `<span class="inline-flex text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">${escapeHTML(bm.category)}</span>`;
     
     const actions = document.createElement("div");
     actions.className = "flex gap-1";
@@ -407,14 +418,14 @@ function renderBookmarks() {
     const body = document.createElement("div");
     body.className = "flex flex-col gap-1";
     body.innerHTML = `
-      <a href="${bm.url}" target="_blank" rel="noopener noreferrer" class="font-semibold text-slate-900 hover:text-emerald-600 transition truncate line-clamp-1 flex items-center gap-1.5" title="${bm.url}">
-        ${bm.title} <i class="ti ti-external-link text-[10px] text-slate-400"></i>
+      <a href="${escapeHTML(bm.url)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-slate-900 hover:text-emerald-600 transition truncate line-clamp-1 flex items-center gap-1.5" title="${escapeHTML(bm.url)}">
+        ${escapeHTML(bm.title)} <i class="ti ti-external-link text-[10px] text-slate-400"></i>
       </a>
-      <p class="text-xs text-slate-500 truncate" title="${bm.url}">${bm.url}</p>
+      <p class="text-xs text-slate-500 truncate" title="${escapeHTML(bm.url)}">${escapeHTML(bm.url)}</p>
     `;
     
     if (bm.notes) {
-      body.innerHTML += `<p class="mt-2 text-sm text-slate-600 border-l-2 border-slate-200 pl-2 italic line-clamp-2">${bm.notes}</p>`;
+      body.innerHTML += `<p class="mt-2 text-sm text-slate-600 border-l-2 border-slate-200 pl-2 italic line-clamp-2">${escapeHTML(bm.notes)}</p>`;
     }
 
     card.append(header, body);
@@ -584,7 +595,7 @@ function renderQuestion() {
   $("#quiz-progress-text").textContent = `Soal ${currentQuestionIdx + 1} dari ${quizQuestions.length}`;
   $("#quiz-score-live").textContent = `Skor: ${currentScore}`;
   
-  const prog = ((currentQuestionIdx) / quizQuestions.length) * 100;
+  const prog = ((currentQuestionIdx + 1) / quizQuestions.length) * 100;
   $("#quiz-progress-bar").style.width = `${prog}%`;
   
   $("#quiz-question-text").textContent = qData.q;
@@ -595,7 +606,7 @@ function renderQuestion() {
   qData.options.forEach((optText, idx) => {
     const btn = document.createElement("button");
     btn.className = "quiz-opt-btn w-full text-left p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50 transition font-medium text-slate-700 flex items-center justify-between";
-    btn.innerHTML = `<span>${optText}</span> <i class="ti ti-circle text-slate-300 text-xl"></i>`;
+    btn.innerHTML = `<span>${escapeHTML(optText)}</span> <i class="ti ti-circle text-slate-300 text-xl"></i>`;
     btn.onclick = () => handleAnswer(idx, btn);
     optsContainer.appendChild(btn);
   });
@@ -617,7 +628,7 @@ function handleAnswer(selectedIdx, btnEl) {
   if (isCorrect) currentScore++;
   
   // Update Buttons UI
-  const allBtns = document.querySelectorAll(".quiz-opt-btn");
+  const allBtns = $all(".quiz-opt-btn");
   allBtns.forEach((btn, idx) => {
     btn.classList.remove("hover:border-violet-300", "hover:bg-violet-50");
     btn.classList.add("opacity-60", "cursor-not-allowed");
@@ -643,7 +654,7 @@ function handleAnswer(selectedIdx, btnEl) {
     feedback.innerHTML = `<i class="ti ti-circle-check-filled text-lg"></i> Tepat sekali!`;
   } else {
     feedback.classList.add("border-rose-200", "bg-rose-50", "text-rose-800");
-    feedback.innerHTML = `<i class="ti ti-alert-circle-filled text-lg"></i> Kurang tepat. Jawaban yang benar adalah: <strong class="ml-1">${qData.options[qData.ans]}</strong>`;
+    feedback.innerHTML = `<i class="ti ti-alert-circle-filled text-lg"></i> Kurang tepat. Jawaban yang benar adalah: <strong class="ml-1">${escapeHTML(qData.options[qData.ans])}</strong>`;
   }
   
   $("#quiz-score-live").textContent = `Skor: ${currentScore}`;
