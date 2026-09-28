@@ -357,21 +357,31 @@ function createModalField(prefix, field, accent) {
 /** Bangun modal dari template + konfigurasi, lalu tempel ke <body> */
 function buildEditModal(template, config) {
   const accent = MODAL_ACCENTS[config.accent] || MODAL_ACCENTS.indigo;
-  const modal = template.content.firstElementChild.cloneNode(true);
+  const root = template.content.firstElementChild;
+  if (!root) return; // template kosong: lewati tanpa error
+  const modal = root.cloneNode(true);
   const slot = (name) => modal.querySelector(`[data-slot="${name}"]`);
 
   modal.id = `modal-${config.prefix}`;
   modal.setAttribute("aria-labelledby", `${modal.id}-title`);
-  slot("title").id = `${modal.id}-title`;
-  slot("title-text").textContent = config.title;
-  slot("icon").classList.add(accent.icon);
 
-  modal.querySelector("form").id = `${config.prefix}-form`;
-  slot("close").dataset.closeModal = config.prefix;
-  slot("cancel").dataset.closeModal = config.prefix;
-  slot("submit").classList.add(...accent.button.split(" "));
+  // Setiap slot opsional: jika markup template berubah, bagian itu dilewati
+  const title = slot("title");
+  if (title) title.id = `${modal.id}-title`;
+  const titleText = slot("title-text");
+  if (titleText) titleText.textContent = config.title;
+  slot("icon")?.classList.add(accent.icon);
+
+  const form = modal.querySelector("form");
+  if (form) form.id = `${config.prefix}-form`;
+  ["close", "cancel"].forEach((name) => {
+    const btn = slot(name);
+    if (btn) btn.dataset.closeModal = config.prefix;
+  });
+  slot("submit")?.classList.add(...accent.button.split(" "));
 
   const fieldsWrap = slot("fields");
+  if (!fieldsWrap) return;
   config.fields.forEach((item) => {
     if (Array.isArray(item)) {
       const row = document.createElement("div");
@@ -907,15 +917,16 @@ const quizQuestions = [
   },
 ];
 
-// State kuis
-let currentQuestionIdx = 0;
-let currentScore = 0;
-let hasAnswered = false;
+// State kuis (semua di-reset lewat resetQuizState())
+let currentQuestionIdx = 0; // indeks soal yang sedang tampil (mulai dari 0)
+let currentScore = 0;       // jumlah jawaban benar pada permainan ini
+let hasAnswered = false;    // true setelah soal dijawab; mencegah menjawab dua kali
 
 const elQuizStart = $("#quiz-start");
 const elQuizQuestion = $("#quiz-question");
 const elQuizResult = $("#quiz-result");
 const elHighScore = $("#quiz-high-score");
+const elHighScoreWrap = $("#quiz-high-score-wrap");
 const elQuizOptions = $("#quiz-options");
 const elQuizFeedback = $("#quiz-feedback");
 const elNextBtn = $("#btn-next-question");
@@ -935,15 +946,43 @@ const QUIZ_RESULT_STYLES = {
 function loadQuizHighScore() {
   const hs = loadData(QUIZ_STORAGE_KEY, 0);
   if (elHighScore) elHighScore.textContent = `${hs} / ${quizQuestions.length}`;
+  // Tampilkan setelah nilai benar terisi (di HTML disembunyikan agar tidak berkedip)
+  if (elHighScoreWrap) elHighScoreWrap.classList.remove("invisible");
+}
+
+/** Tampilkan tepat satu layar kuis: "start" | "question" | "result" */
+function showQuizScreen(name) {
+  elQuizStart.classList.toggle("hidden", name !== "start");
+  elQuizQuestion.classList.toggle("hidden", name !== "question");
+  elQuizResult.classList.toggle("hidden", name !== "result");
+}
+
+/** Perbarui teks progres, skor langsung, dan bar progres sesuai state saat ini */
+function updateQuizProgress() {
+  setText("#quiz-progress-text", `Soal ${currentQuestionIdx + 1} dari ${quizQuestions.length}`);
+  setText("#quiz-score-live", `Skor: ${currentScore}`);
+  const progressBar = $("#quiz-progress-bar");
+  if (progressBar) progressBar.style.width = `${((currentQuestionIdx + 1) / quizQuestions.length) * 100}%`;
+}
+
+/** Satu pintu untuk mengembalikan kuis ke kondisi awal (dipakai Mulai dan Main Lagi) */
+function resetQuizState() {
+  if (!quizReady) return;
+  currentQuestionIdx = 0;
+  currentScore = 0;
+  hasAnswered = false;
+
+  updateQuizProgress();
+  setText("#quiz-final-score", `0 / ${quizQuestions.length}`);
+  elQuizOptions.innerHTML = "";
+  elQuizFeedback.className = `hidden ${QUIZ_FEEDBACK_BASE}`;
+  elNextBtn.classList.add("hidden");
 }
 
 function startQuiz() {
   if (!quizReady) return;
-  currentQuestionIdx = 0;
-  currentScore = 0;
-  elQuizStart.classList.add("hidden");
-  elQuizResult.classList.add("hidden");
-  elQuizQuestion.classList.remove("hidden");
+  resetQuizState();
+  showQuizScreen("question");
   renderQuestion();
 }
 
@@ -952,10 +991,7 @@ function renderQuestion() {
   hasAnswered = false;
   const qData = quizQuestions[currentQuestionIdx];
 
-  setText("#quiz-progress-text", `Soal ${currentQuestionIdx + 1} dari ${quizQuestions.length}`);
-  setText("#quiz-score-live", `Skor: ${currentScore}`);
-  const progressBar = $("#quiz-progress-bar");
-  if (progressBar) progressBar.style.width = `${((currentQuestionIdx + 1) / quizQuestions.length) * 100}%`;
+  updateQuizProgress();
   setText("#quiz-question-text", qData.q);
 
   elQuizOptions.innerHTML = "";
@@ -1006,7 +1042,7 @@ function handleAnswer(selectedIdx) {
     elQuizFeedback.innerHTML = `<i class="ti ti-alert-circle-filled text-lg"></i> Kurang tepat. Jawaban yang benar adalah: <strong class="ml-1">${escapeHTML(qData.options[qData.ans])}</strong>`;
   }
 
-  setText("#quiz-score-live", `Skor: ${currentScore}`);
+  updateQuizProgress();
 
   const isLast = currentQuestionIdx === quizQuestions.length - 1;
   elNextBtn.classList.remove("hidden");
@@ -1017,8 +1053,7 @@ function handleAnswer(selectedIdx) {
 
 function finishQuiz() {
   if (!quizReady) return;
-  elQuizQuestion.classList.add("hidden");
-  elQuizResult.classList.remove("hidden");
+  showQuizScreen("result");
   setText("#quiz-final-score", `${currentScore} / ${quizQuestions.length}`);
 
   if (currentScore > loadData(QUIZ_STORAGE_KEY, 0)) {
@@ -1049,8 +1084,8 @@ elNextBtn?.addEventListener("click", () => {
 
 $("#btn-retry-quiz")?.addEventListener("click", () => {
   if (!quizReady) return;
-  elQuizResult.classList.add("hidden");
-  elQuizStart.classList.remove("hidden");
+  resetQuizState();
+  showQuizScreen("start");
 });
 
 /* ========== INITIALIZATION ========== */

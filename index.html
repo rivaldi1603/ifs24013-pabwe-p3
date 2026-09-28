@@ -207,9 +207,9 @@
         
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
           <p class="text-sm text-slate-600">Uji pengetahuan web development dasar Anda.</p>
-          <div class="text-right">
+          <div id="quiz-high-score-wrap" class="text-right invisible">
             <p class="text-xs uppercase tracking-wide text-violet-700 font-semibold mb-0.5">High Score</p>
-            <p id="quiz-high-score" class="font-display text-xl font-bold text-violet-900">0 / 0</p>
+            <p id="quiz-high-score" class="font-display text-xl font-bold text-violet-900">0 / 10</p>
           </div>
         </div>
 
@@ -229,12 +229,12 @@
         <!-- Layar Pertanyaan -->
         <div id="quiz-question" class="hidden">
           <div class="flex justify-between items-center text-sm font-medium text-slate-500 mb-4">
-            <span id="quiz-progress-text">Soal 1 dari 5</span>
+            <span id="quiz-progress-text">Soal 1 dari 10</span>
             <span id="quiz-score-live" class="text-violet-600">Skor: 0</span>
           </div>
           
           <div class="w-full bg-slate-100 rounded-full h-1.5 mb-6">
-            <div id="quiz-progress-bar" class="bg-violet-600 h-1.5 rounded-full transition-all duration-300" style="width: 20%"></div>
+            <div id="quiz-progress-bar" class="bg-violet-600 h-1.5 rounded-full transition-all duration-300" style="width: 10%"></div>
           </div>
 
           <h3 id="quiz-question-text" class="text-lg sm:text-xl font-semibold text-slate-900 mb-6 leading-snug">
@@ -263,7 +263,7 @@
           <h3 class="text-2xl font-bold text-slate-900 mb-2">Kuis Selesai!</h3>
           <p class="text-slate-600 mb-6">Skor akhir Anda adalah:</p>
           <div class="inline-block bg-slate-50 border border-slate-200 rounded-2xl px-8 py-4 mb-8">
-            <p id="quiz-final-score" class="font-display text-4xl font-bold text-slate-900">0 / 5</p>
+            <p id="quiz-final-score" class="font-display text-4xl font-bold text-slate-900">0 / 10</p>
           </div>
           <br>
           <button id="btn-retry-quiz" class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-6 py-3 transition shadow-sm">
