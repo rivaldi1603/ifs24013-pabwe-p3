@@ -270,6 +270,129 @@ function trapFocus(e, modal) {
   }
 }
 
+/* --- Builder modal ubah (satu template HTML, banyak modal) --- */
+
+/** Kelas Tailwind per warna aksen (ditulis utuh agar terbaca oleh Tailwind) */
+const MODAL_ACCENTS = {
+  indigo: {
+    icon: "text-indigo-600",
+    ring: "focus:ring-indigo-500",
+    button: "bg-indigo-600 hover:bg-indigo-700",
+  },
+  emerald: {
+    icon: "text-emerald-600",
+    ring: "focus:ring-emerald-500",
+    button: "bg-emerald-600 hover:bg-emerald-700",
+  },
+};
+
+const FIELD_LABEL_CLASS = "block text-sm font-medium text-slate-700 mb-1";
+const FIELD_INPUT_CLASS = "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2";
+
+/**
+ * Konfigurasi modal ubah. ID yang dihasilkan: modal-{prefix}, {prefix}-form, {prefix}-{key}.
+ * Item fields berupa array = beberapa field dalam satu baris (grid 2 kolom).
+ * optionsFrom = salin opsi <select> dari form tambah supaya daftar opsi tidak ditulis dua kali.
+ */
+const EDIT_MODAL_CONFIGS = [
+  {
+    prefix: "expense-edit",
+    title: "Ubah Transaksi",
+    accent: "indigo",
+    fields: [
+      { key: "title", label: "Judul", type: "text" },
+      { key: "category", label: "Kategori", type: "select", optionsFrom: "#expense-category" },
+      [
+        { key: "amount", label: "Jumlah", type: "number", min: 1 },
+        { key: "type", label: "Tipe", type: "select", optionsFrom: "#expense-type" },
+      ],
+      { key: "date", label: "Tanggal", type: "date" },
+    ],
+  },
+  {
+    prefix: "bookmark-edit",
+    title: "Ubah Bookmark",
+    accent: "emerald",
+    fields: [
+      { key: "title", label: "Judul", type: "text" },
+      { key: "url", label: "URL", type: "url" },
+      { key: "category", label: "Kategori", type: "text" },
+      { key: "notes", label: "Catatan", type: "text", required: false },
+    ],
+  },
+];
+
+/** Buat satu field (label + input/select) */
+function createModalField(prefix, field, accent) {
+  const id = `${prefix}-${field.key}`;
+  const wrap = document.createElement("div");
+
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.className = FIELD_LABEL_CLASS;
+  label.textContent = field.label;
+
+  let input;
+  if (field.type === "select") {
+    input = document.createElement("select");
+    const source = field.optionsFrom ? $(field.optionsFrom) : null;
+    if (source) {
+      [...source.options]
+        .filter((opt) => !opt.disabled) // lewati placeholder "Kategori..."
+        .forEach((opt) => input.add(new Option(opt.text, opt.value)));
+    }
+  } else {
+    input = document.createElement("input");
+    input.type = field.type;
+    if (field.min !== undefined) input.min = field.min;
+  }
+  input.id = id;
+  input.required = field.required !== false;
+  input.className = `${FIELD_INPUT_CLASS} ${accent.ring}`;
+
+  wrap.append(label, input);
+  return wrap;
+}
+
+/** Bangun modal dari template + konfigurasi, lalu tempel ke <body> */
+function buildEditModal(template, config) {
+  const accent = MODAL_ACCENTS[config.accent] || MODAL_ACCENTS.indigo;
+  const modal = template.content.firstElementChild.cloneNode(true);
+  const slot = (name) => modal.querySelector(`[data-slot="${name}"]`);
+
+  modal.id = `modal-${config.prefix}`;
+  modal.setAttribute("aria-labelledby", `${modal.id}-title`);
+  slot("title").id = `${modal.id}-title`;
+  slot("title-text").textContent = config.title;
+  slot("icon").classList.add(accent.icon);
+
+  modal.querySelector("form").id = `${config.prefix}-form`;
+  slot("close").dataset.closeModal = config.prefix;
+  slot("cancel").dataset.closeModal = config.prefix;
+  slot("submit").classList.add(...accent.button.split(" "));
+
+  const fieldsWrap = slot("fields");
+  config.fields.forEach((item) => {
+    if (Array.isArray(item)) {
+      const row = document.createElement("div");
+      row.className = "grid grid-cols-2 gap-4";
+      item.forEach((f) => row.appendChild(createModalField(config.prefix, f, accent)));
+      fieldsWrap.appendChild(row);
+    } else {
+      fieldsWrap.appendChild(createModalField(config.prefix, item, accent));
+    }
+  });
+
+  document.body.appendChild(modal);
+}
+
+function mountEditModals() {
+  const template = $("#tpl-edit-modal");
+  if (!template) return;
+  EDIT_MODAL_CONFIGS.forEach((config) => buildEditModal(template, config));
+}
+mountEditModals(); // harus sebelum listener tombol tutup di bawah
+
 // Tombol tutup (X / Batal)
 $all("[data-close-modal]").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -797,6 +920,9 @@ const elQuizOptions = $("#quiz-options");
 const elQuizFeedback = $("#quiz-feedback");
 const elNextBtn = $("#btn-next-question");
 
+// Semua elemen kuis wajib ada; jika tidak, fungsi kuis berhenti tanpa error
+const quizReady = [elQuizStart, elQuizQuestion, elQuizResult, elQuizOptions, elQuizFeedback, elNextBtn].every(Boolean);
+
 const QUIZ_OPTION_CLASS =
   "quiz-opt-btn w-full text-left p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50 transition font-medium text-slate-700 flex items-center justify-between";
 const QUIZ_FEEDBACK_BASE = "mb-6 p-4 rounded-xl border text-sm font-medium flex items-center gap-2";
@@ -812,6 +938,7 @@ function loadQuizHighScore() {
 }
 
 function startQuiz() {
+  if (!quizReady) return;
   currentQuestionIdx = 0;
   currentScore = 0;
   elQuizStart.classList.add("hidden");
@@ -821,6 +948,7 @@ function startQuiz() {
 }
 
 function renderQuestion() {
+  if (!quizReady) return;
   hasAnswered = false;
   const qData = quizQuestions[currentQuestionIdx];
 
@@ -845,7 +973,7 @@ function renderQuestion() {
 }
 
 function handleAnswer(selectedIdx) {
-  if (hasAnswered) return;
+  if (!quizReady || hasAnswered) return;
   hasAnswered = true;
 
   const qData = quizQuestions[currentQuestionIdx];
@@ -861,11 +989,11 @@ function handleAnswer(selectedIdx) {
     if (idx === qData.ans) {
       btn.classList.replace("border-slate-200", "border-emerald-500");
       btn.classList.add("bg-emerald-50", "text-emerald-800", "opacity-100");
-      icon.className = "ti ti-check text-emerald-600 text-xl";
+      if (icon) icon.className = "ti ti-check text-emerald-600 text-xl";
     } else if (idx === selectedIdx) {
       btn.classList.replace("border-slate-200", "border-rose-500");
       btn.classList.add("bg-rose-50", "text-rose-800", "opacity-100");
-      icon.className = "ti ti-x text-rose-600 text-xl";
+      if (icon) icon.className = "ti ti-x text-rose-600 text-xl";
     }
   });
 
@@ -888,6 +1016,7 @@ function handleAnswer(selectedIdx) {
 }
 
 function finishQuiz() {
+  if (!quizReady) return;
   elQuizQuestion.classList.add("hidden");
   elQuizResult.classList.remove("hidden");
   setText("#quiz-final-score", `${currentScore} / ${quizQuestions.length}`);
@@ -919,6 +1048,7 @@ elNextBtn?.addEventListener("click", () => {
 });
 
 $("#btn-retry-quiz")?.addEventListener("click", () => {
+  if (!quizReady) return;
   elQuizResult.classList.add("hidden");
   elQuizStart.classList.remove("hidden");
 });
