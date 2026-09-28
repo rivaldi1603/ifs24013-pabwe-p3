@@ -73,6 +73,33 @@ function createNoMatchNode(tag, message, extraClass = "") {
   return el;
 }
 
+/** Notifikasi sukses singkat (toast); otomatis hilang, aman untuk pembaca layar */
+function showToast(message) {
+  let container = $("#toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toast-container";
+    container.className = "fixed bottom-4 right-4 left-4 sm:left-auto z-[60] flex flex-col gap-2 items-end pointer-events-none";
+    container.setAttribute("role", "status");
+    container.setAttribute("aria-live", "polite");
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className =
+    "pointer-events-auto flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-medium shadow-lg transition-all duration-300 opacity-0 translate-y-2";
+  toast.innerHTML = '<i class="ti ti-circle-check-filled text-lg"></i><span></span>';
+  toast.lastChild.textContent = message;
+  container.appendChild(toast);
+
+  // Animasi masuk, lalu keluar setelah 2,5 detik
+  requestAnimationFrame(() => toast.classList.remove("opacity-0", "translate-y-2"));
+  setTimeout(() => {
+    toast.classList.add("opacity-0", "translate-y-2");
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
 /* ========== TAB SWITCHER (via URL Query) ========== */
 const DEFAULT_TAB = "expense";
 const tabButtons = $all(".tab-btn");
@@ -353,12 +380,14 @@ if (expenseForm) {
     saveData(EXPENSE_STORAGE_KEY, expenses);
     expenseForm.reset();
     renderExpenses();
+    showToast("Transaksi berhasil ditambahkan!");
   });
 }
 
-// Cari / filter / sort
-[expSearch, expFilterType, expSort].forEach((el) => {
-  if (el) el.addEventListener("input", renderExpenses);
+// Cari: 'input' (real-time saat mengetik); dropdown filter/sort: 'change'
+if (expSearch) expSearch.addEventListener("input", renderExpenses);
+[expFilterType, expSort].forEach((el) => {
+  if (el) el.addEventListener("change", renderExpenses);
 });
 
 // Ubah transaksi
@@ -391,6 +420,7 @@ if (expenseEditForm) {
     saveData(EXPENSE_STORAGE_KEY, expenses);
     renderExpenses();
     closeModal($("#modal-expense-edit"));
+    showToast("Transaksi berhasil diperbarui!");
   });
 }
 
@@ -527,12 +557,12 @@ if (bookmarkForm) {
     saveData(BOOKMARK_STORAGE_KEY, bookmarks);
     bookmarkForm.reset();
     renderBookmarks();
+    showToast("Bookmark berhasil ditambahkan!");
   });
 }
 
-[bookmarkSearch, bookmarkSort].forEach((el) => {
-  if (el) el.addEventListener("input", renderBookmarks);
-});
+if (bookmarkSearch) bookmarkSearch.addEventListener("input", renderBookmarks);
+if (bookmarkSort) bookmarkSort.addEventListener("change", renderBookmarks);
 
 // Ubah bookmark
 function openEditBookmarkModal(id) {
@@ -563,6 +593,7 @@ if (bookmarkEditForm) {
     saveData(BOOKMARK_STORAGE_KEY, bookmarks);
     renderBookmarks();
     closeModal($("#modal-bookmark-edit"));
+    showToast("Bookmark berhasil diperbarui!");
   });
 }
 
@@ -595,7 +626,10 @@ function openDeleteModal(type, id, name) {
 if (deleteConfirmBtn) {
   deleteConfirmBtn.addEventListener("click", () => {
     const handler = DELETE_HANDLERS[deleteTarget.type];
-    if (handler) handler(deleteTarget.id);
+    if (handler) {
+      handler(deleteTarget.id);
+      showToast("Data berhasil dihapus.");
+    }
     deleteTarget = { type: null, id: null };
     closeModal(deleteModal);
   });
@@ -629,6 +663,41 @@ const quizQuestions = [
     q: "Properti CSS apa yang digunakan untuk mengatur warna teks?",
     options: ["text-color", "fgcolor", "color", "font-color"],
     ans: 2,
+  },
+  {
+    q: "Method mana yang menambahkan elemen ke akhir sebuah array di JavaScript?",
+    options: ["push()", "pop()", "shift()", "concat() tanpa hasil disimpan"],
+    ans: 0,
+  },
+  {
+    q: "Apa perbedaan utama antara localStorage dan sessionStorage?",
+    options: [
+      "localStorage tetap ada setelah browser ditutup, sessionStorage hilang saat tab ditutup",
+      "localStorage hanya menyimpan angka",
+      "sessionStorage dapat dibaca semua website",
+      "Keduanya sama persis",
+    ],
+    ans: 0,
+  },
+  {
+    q: "Operator '===' di JavaScript berfungsi untuk...",
+    options: [
+      "Membandingkan nilai dan tipe data",
+      "Membandingkan nilai saja",
+      "Memberi nilai ke variabel",
+      "Menggabungkan dua string",
+    ],
+    ans: 0,
+  },
+  {
+    q: "Method DOM mana yang mengambil elemen pertama yang cocok dengan selector CSS?",
+    options: ["getElement()", "querySelector()", "findByCss()", "selectFirst()"],
+    ans: 1,
+  },
+  {
+    q: "Atribut apa yang sebaiknya dipasang pada link target=\"_blank\" agar lebih aman?",
+    options: ["rel=\"noopener noreferrer\"", "rel=\"external\"", "type=\"secure\"", "download"],
+    ans: 0,
   },
 ];
 
