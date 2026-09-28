@@ -67,22 +67,22 @@
 
     <!-- Tab Navigation -->
     <nav class="flex flex-col sm:flex-row gap-1 p-1 bg-white/80 border border-slate-200 rounded-xl shadow-sm mb-6" role="tablist">
-      <button type="button" role="tab" data-tab="expense" class="tab-btn flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-semibold transition bg-indigo-600 text-white shadow" aria-selected="true">
+      <button type="button" role="tab" id="tab-expense" aria-controls="panel-expense" data-tab="expense" class="tab-btn flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-semibold transition bg-indigo-600 text-white shadow" aria-selected="true">
         <i class="ti ti-wallet text-lg"></i>
         <span>Expense Tracker</span>
       </button>
-      <button type="button" role="tab" data-tab="bookmark" class="tab-btn flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100" aria-selected="false">
+      <button type="button" role="tab" id="tab-bookmark" aria-controls="panel-bookmark" data-tab="bookmark" class="tab-btn flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100" aria-selected="false">
         <i class="ti ti-bookmarks text-lg"></i>
         <span>Bookmark Manager</span>
       </button>
-      <button type="button" role="tab" data-tab="quiz" class="tab-btn flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100" aria-selected="false">
+      <button type="button" role="tab" id="tab-quiz" aria-controls="panel-quiz" data-tab="quiz" class="tab-btn flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-semibold transition text-slate-600 hover:bg-slate-100" aria-selected="false">
         <i class="ti ti-device-gamepad text-lg"></i>
         <span>Quiz App</span>
       </button>
     </nav>
 
     <!-- ================= TAB 1: EXPENSE TRACKER ================= -->
-    <section id="panel-expense" class="tab-panel space-y-5">
+    <section id="panel-expense" role="tabpanel" aria-labelledby="tab-expense" class="tab-panel space-y-5">
       <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
         <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <i class="ti ti-wallet text-indigo-600"></i>
@@ -157,7 +157,7 @@
     </section>
 
     <!-- ================= TAB 2: BOOKMARK MANAGER ================= -->
-    <section id="panel-bookmark" class="tab-panel hidden space-y-5">
+    <section id="panel-bookmark" role="tabpanel" aria-labelledby="tab-bookmark" class="tab-panel hidden space-y-5">
       <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
         <h2 class="font-display text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
           <i class="ti ti-bookmarks text-emerald-600"></i>
@@ -198,7 +198,7 @@
     </section>
 
     <!-- ================= TAB 3: QUIZ APP ================= -->
-    <section id="panel-quiz" class="tab-panel hidden space-y-5">
+    <section id="panel-quiz" role="tabpanel" aria-labelledby="tab-quiz" class="tab-panel hidden space-y-5">
       <div class="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
         <h2 class="font-display text-xl font-semibold text-slate-900 mb-2 flex items-center gap-2">
           <i class="ti ti-device-gamepad text-violet-600"></i>
@@ -279,11 +279,11 @@
   <!-- ================= MODALS ================= -->
 
   <!-- Modal Expense: Edit -->
-  <div id="modal-expense-edit" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true">
+  <div id="modal-expense-edit" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-expense-edit-title">
     <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
     <div class="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 sm:p-6">
       <div class="flex items-start justify-between gap-3 mb-4">
-        <h3 class="font-display text-lg font-semibold text-slate-900 flex items-center gap-2">
+        <h3 id="modal-expense-edit-title" class="font-display text-lg font-semibold text-slate-900 flex items-center gap-2">
           <i class="ti ti-pencil text-indigo-600"></i> Ubah Transaksi
         </h3>
         <button type="button" data-close-modal="expense-edit" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
@@ -334,11 +334,11 @@
   </div>
 
   <!-- Modal Bookmark: Edit -->
-  <div id="modal-bookmark-edit" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true">
+  <div id="modal-bookmark-edit" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-bookmark-edit-title">
     <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
     <div class="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl p-5 sm:p-6">
       <div class="flex items-start justify-between gap-3 mb-4">
-        <h3 class="font-display text-lg font-semibold text-slate-900 flex items-center gap-2">
+        <h3 id="modal-bookmark-edit-title" class="font-display text-lg font-semibold text-slate-900 flex items-center gap-2">
           <i class="ti ti-pencil text-emerald-600"></i> Ubah Bookmark
         </h3>
         <button type="button" data-close-modal="bookmark-edit" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
@@ -373,13 +373,13 @@
   </div>
 
   <!-- Modal Konfirmasi Hapus Umum -->
-  <div id="modal-delete" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true">
+  <div id="modal-delete" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title">
     <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
     <div class="relative w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-xl p-5 sm:p-6 text-center">
       <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-rose-100 mb-4">
         <i class="ti ti-alert-triangle text-2xl text-rose-600"></i>
       </div>
-      <h3 class="font-display text-lg font-semibold text-slate-900 mb-2">Konfirmasi Hapus</h3>
+      <h3 id="modal-delete-title" class="font-display text-lg font-semibold text-slate-900 mb-2">Konfirmasi Hapus</h3>
       <p class="text-sm text-slate-600 mb-6">
         Apakah Anda yakin ingin menghapus <strong id="delete-target-name" class="text-slate-900"></strong>? Tindakan ini tidak dapat dibatalkan.
       </p>

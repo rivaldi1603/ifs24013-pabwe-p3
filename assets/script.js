@@ -47,10 +47,30 @@ function formatRupiah(number) {
   }).format(number);
 }
 
+/** Baca nilai field dengan aman (kembalikan "" jika elemen tidak ada di markup) */
+function getFieldValue(selector) {
+  return $(selector)?.value?.trim() ?? "";
+}
+
+/** Isi teks elemen dengan aman (dilewati jika elemen tidak ada) */
+function setText(selector, text) {
+  const el = $(selector);
+  if (el) el.textContent = text;
+}
+
+/** Isi nilai field dengan aman (dilewati jika elemen tidak ada) */
+function setFieldValue(selector, value) {
+  const el = $(selector);
+  if (el) el.value = value ?? "";
+}
+
 /** Buat tombol ikon (ubah/hapus) yang reusable dan aksesibel */
-function createIconButton({ icon, label, className, onClick }) {
+function createIconButton({ icon, label, className, onClick, action, id }) {
   const btn = document.createElement("button");
   btn.type = "button";
+  // data-* dipakai untuk menemukan kembali tombol pemicu setelah daftar dirender ulang
+  if (action) btn.dataset.action = action;
+  if (id) btn.dataset.id = id;
   btn.className = className;
   btn.title = label;
   btn.setAttribute("aria-label", label);
@@ -180,20 +200,74 @@ function clearInlineError(formEl) {
   if (errEl) errEl.classList.add("hidden");
 }
 
+/* --- Manajemen fokus modal --- */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+let modalTrigger = null; // elemen pemicu, untuk mengembalikan fokus saat modal ditutup
+
+function getFocusable(modal) {
+  return [...modal.querySelectorAll(FOCUSABLE_SELECTOR)].filter((el) => el.offsetParent !== null || el === document.activeElement);
+}
+
 function openModal(modal) {
   if (!modal) return;
+  const trigger = document.activeElement;
+  modalTrigger = {
+    el: trigger,
+    // Selector cadangan: daftar dirender ulang setelah ubah, jadi tombol lama bisa terlepas dari DOM
+    selector: trigger?.dataset?.action
+      ? `[data-action="${trigger.dataset.action}"][data-id="${trigger.dataset.id}"]`
+      : null,
+  };
+
   modal.classList.remove("hidden");
   modal.classList.add("flex");
   document.body.classList.add("overflow-hidden");
+
+  // Pindahkan fokus ke field/tombol pertama di dalam modal
+  const first = modal.querySelector("input, select, textarea") || getFocusable(modal)[0];
+  if (first) first.focus();
+}
+
+/** Kembalikan fokus ke pemicu; jika sudah hilang (mis. item dihapus) pakai tab aktif */
+function restoreFocus() {
+  if (!modalTrigger) return;
+  const { el, selector } = modalTrigger;
+  modalTrigger = null;
+
+  const target =
+    (el && el.isConnected && el) ||
+    (selector && $(selector)) ||
+    $(`.tab-btn[aria-selected="true"]`);
+  if (target) target.focus();
 }
 
 function closeModal(modal) {
   if (!modal) return;
+  const wasOpen = !modal.classList.contains("hidden");
   modal.classList.add("hidden");
   modal.classList.remove("flex");
   document.body.classList.remove("overflow-hidden");
   const form = modal.querySelector("form");
   if (form) clearInlineError(form);
+  if (wasOpen) restoreFocus();
+}
+
+/** Focus trap: Tab/Shift+Tab berputar di dalam modal yang terbuka */
+function trapFocus(e, modal) {
+  const focusable = getFocusable(modal);
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+
+  if (e.shiftKey && (active === first || !modal.contains(active))) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && (active === last || !modal.contains(active))) {
+    e.preventDefault();
+    first.focus();
+  }
 }
 
 // Tombol tutup (X / Batal)
@@ -209,12 +283,13 @@ $all(".modal-backdrop").forEach((backdrop) => {
   backdrop.addEventListener("click", () => closeModal(backdrop.closest("[role='dialog']")));
 });
 
-// Escape menutup semua modal yang terbuka
+// Keyboard: Escape menutup modal, Tab dikunci di dalam modal
 document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape") return;
-  $all("[role='dialog']").forEach((modal) => {
-    if (!modal.classList.contains("hidden")) closeModal(modal);
-  });
+  const openModalEl = [...$all("[role='dialog']")].find((m) => !m.classList.contains("hidden"));
+  if (!openModalEl) return;
+
+  if (e.key === "Escape") closeModal(openModalEl);
+  else if (e.key === "Tab") trapFocus(e, openModalEl);
 });
 
 /* ========== FITUR 1: EXPENSE TRACKER ========== */
@@ -236,11 +311,11 @@ const expBalance = $("#expense-balance");
 /** Baca field form tambah (prefix "expense") atau ubah (prefix "expense-edit") */
 function readExpenseFields(prefix) {
   return {
-    title: $(`#${prefix}-title`).value.trim(),
-    category: $(`#${prefix}-category`).value,
-    amount: Number($(`#${prefix}-amount`).value),
-    type: $(`#${prefix}-type`).value,
-    date: $(`#${prefix}-date`).value,
+    title: getFieldValue(`#${prefix}-title`),
+    category: getFieldValue(`#${prefix}-category`),
+    amount: Number(getFieldValue(`#${prefix}-amount`)),
+    type: getFieldValue(`#${prefix}-type`),
+    date: getFieldValue(`#${prefix}-date`),
   };
 }
 
@@ -333,12 +408,16 @@ function createExpenseItem(exp) {
       label: `Ubah ${exp.title}`,
       className: "p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition",
       onClick: () => openEditExpenseModal(exp.id),
+      action: "edit-expense",
+      id: exp.id,
     }),
     createIconButton({
       icon: "ti-trash",
       label: `Hapus ${exp.title}`,
       className: "p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition",
       onClick: () => openDeleteModal("expense", exp.id, exp.title),
+      action: "delete-expense",
+      id: exp.id,
     })
   );
 
@@ -396,11 +475,11 @@ function openEditExpenseModal(id) {
   if (!exp) return;
   editExpenseId = id;
 
-  $("#expense-edit-title").value = exp.title;
-  $("#expense-edit-category").value = exp.category;
-  $("#expense-edit-amount").value = exp.amount;
-  $("#expense-edit-type").value = exp.type;
-  $("#expense-edit-date").value = exp.date;
+  setFieldValue("#expense-edit-title", exp.title);
+  setFieldValue("#expense-edit-category", exp.category);
+  setFieldValue("#expense-edit-amount", exp.amount);
+  setFieldValue("#expense-edit-type", exp.type);
+  setFieldValue("#expense-edit-date", exp.date);
   openModal($("#modal-expense-edit"));
 }
 
@@ -448,10 +527,10 @@ function isValidURL(string) {
 /** Baca field form tambah (prefix "bookmark") atau ubah (prefix "bookmark-edit") */
 function readBookmarkFields(prefix) {
   return {
-    title: $(`#${prefix}-title`).value.trim(),
-    url: $(`#${prefix}-url`).value.trim(),
-    category: $(`#${prefix}-category`).value.trim(),
-    notes: $(`#${prefix}-notes`)?.value.trim() || "",
+    title: getFieldValue(`#${prefix}-title`),
+    url: getFieldValue(`#${prefix}-url`),
+    category: getFieldValue(`#${prefix}-category`),
+    notes: getFieldValue(`#${prefix}-notes`),
   };
 }
 
@@ -499,12 +578,16 @@ function createBookmarkCard(bm) {
       label: `Ubah ${bm.title}`,
       className: "p-1.5 rounded text-slate-400 hover:text-emerald-600 hover:bg-emerald-50",
       onClick: () => openEditBookmarkModal(bm.id),
+      action: "edit-bookmark",
+      id: bm.id,
     }),
     createIconButton({
       icon: "ti-trash",
       label: `Hapus ${bm.title}`,
       className: "p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50",
       onClick: () => openDeleteModal("bookmark", bm.id, bm.title),
+      action: "delete-bookmark",
+      id: bm.id,
     })
   );
   header.appendChild(actions);
@@ -570,10 +653,10 @@ function openEditBookmarkModal(id) {
   if (!bm) return;
   editBookmarkId = id;
 
-  $("#bookmark-edit-title").value = bm.title;
-  $("#bookmark-edit-url").value = bm.url;
-  $("#bookmark-edit-category").value = bm.category;
-  if ($("#bookmark-edit-notes")) $("#bookmark-edit-notes").value = bm.notes || "";
+  setFieldValue("#bookmark-edit-title", bm.title);
+  setFieldValue("#bookmark-edit-url", bm.url);
+  setFieldValue("#bookmark-edit-category", bm.category);
+  setFieldValue("#bookmark-edit-notes", bm.notes);
   openModal($("#modal-bookmark-edit"));
 }
 
@@ -741,10 +824,11 @@ function renderQuestion() {
   hasAnswered = false;
   const qData = quizQuestions[currentQuestionIdx];
 
-  $("#quiz-progress-text").textContent = `Soal ${currentQuestionIdx + 1} dari ${quizQuestions.length}`;
-  $("#quiz-score-live").textContent = `Skor: ${currentScore}`;
-  $("#quiz-progress-bar").style.width = `${((currentQuestionIdx + 1) / quizQuestions.length) * 100}%`;
-  $("#quiz-question-text").textContent = qData.q;
+  setText("#quiz-progress-text", `Soal ${currentQuestionIdx + 1} dari ${quizQuestions.length}`);
+  setText("#quiz-score-live", `Skor: ${currentScore}`);
+  const progressBar = $("#quiz-progress-bar");
+  if (progressBar) progressBar.style.width = `${((currentQuestionIdx + 1) / quizQuestions.length) * 100}%`;
+  setText("#quiz-question-text", qData.q);
 
   elQuizOptions.innerHTML = "";
   qData.options.forEach((optText, idx) => {
@@ -794,7 +878,7 @@ function handleAnswer(selectedIdx) {
     elQuizFeedback.innerHTML = `<i class="ti ti-alert-circle-filled text-lg"></i> Kurang tepat. Jawaban yang benar adalah: <strong class="ml-1">${escapeHTML(qData.options[qData.ans])}</strong>`;
   }
 
-  $("#quiz-score-live").textContent = `Skor: ${currentScore}`;
+  setText("#quiz-score-live", `Skor: ${currentScore}`);
 
   const isLast = currentQuestionIdx === quizQuestions.length - 1;
   elNextBtn.classList.remove("hidden");
@@ -806,7 +890,7 @@ function handleAnswer(selectedIdx) {
 function finishQuiz() {
   elQuizQuestion.classList.add("hidden");
   elQuizResult.classList.remove("hidden");
-  $("#quiz-final-score").textContent = `${currentScore} / ${quizQuestions.length}`;
+  setText("#quiz-final-score", `${currentScore} / ${quizQuestions.length}`);
 
   if (currentScore > loadData(QUIZ_STORAGE_KEY, 0)) {
     saveData(QUIZ_STORAGE_KEY, currentScore);
@@ -818,6 +902,7 @@ function finishQuiz() {
     : currentScore >= quizQuestions.length / 2 ? "good"
     : "low";
   const icon = $("#quiz-result-icon");
+  if (!icon) return;
   icon.className = `inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 ${QUIZ_RESULT_STYLES[level].cls}`;
   icon.innerHTML = `<i class="ti ${QUIZ_RESULT_STYLES[level].icon} text-4xl"></i>`;
 }
